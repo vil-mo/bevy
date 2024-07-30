@@ -717,6 +717,20 @@ pub struct Ref<'w, T: ?Sized> {
 }
 
 impl<'w, T: ?Sized> Ref<'w, T> {
+    /// Copies a reference.
+    ///
+    /// Note that unless you actually need an instance of `Ref<T>`, you should
+    /// prefer to just convert it to `&T` which can be freely copied.
+    #[allow(clippy::should_implement_trait)]
+    pub fn clone(this: &Self) -> Self {
+        Self {
+            value: this.value,
+            ticks: this.ticks.clone(),
+            #[cfg(feature = "track_change_detection")]
+            changed_by: this.changed_by,
+        }
+    }
+
     /// Returns the reference wrapped by this type. The reference is allowed to outlive `self`, which makes this method more flexible than simply borrowing `self`.
     pub fn into_inner(self) -> &'w T {
         self.value
