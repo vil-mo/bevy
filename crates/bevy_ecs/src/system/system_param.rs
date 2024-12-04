@@ -10,7 +10,7 @@ use crate::{
         QueryState, ReadOnlyQueryData,
     },
     storage::ResourceData,
-    system::{Query, Single, SystemMeta},
+    system::{Query, Single, System, SystemIn, SystemMeta},
     world::{
         unsafe_world_cell::UnsafeWorldCell, DeferredWorld, FilteredResources, FilteredResourcesMut,
         FromWorld, World,
@@ -1891,6 +1891,40 @@ impl<T: SystemParam> ParamSet<'_, '_, Vec<T>> {
                 unsafe { T::get_param(state, &self.system_meta, self.world, self.change_tick) },
             );
         });
+    }
+}
+
+pub struct SystemRunner<'w, 's, T: System> {
+    world: UnsafeWorldCell<'w>,
+    system: &'s mut T,
+}
+
+impl<'w, 's, T: System> SystemRunner<'w, 's, T> {
+    pub fn run(&mut self, input: SystemIn<'_, T>) -> T::Out {
+        // SAFETY: There is no way of creating an instance of `SystemRunner`
+        unsafe { self.system.run_unsafe(input, self.world) }
+    }
+}
+
+// SAFETY: init_state always panics
+unsafe impl<T: System> SystemParam for SystemRunner<'_, '_, T> {
+    type State = T;
+    type Item<'world, 'state> = SystemRunner<'world, 'state, T>;
+
+    fn init_state(_world: &mut World, _system_meta: &mut SystemMeta) -> Self::State {
+        panic!("SystemRunner can't be just a system parameter, it should be built with `SystemParamBuilder::build_state`");
+    }
+
+    unsafe fn get_param<'world, 'state>(
+        state: &'state mut Self::State,
+        _system_meta: &SystemMeta,
+        world: UnsafeWorldCell<'world>,
+        _change_tick: Tick,
+    ) -> Self::Item<'world, 'state> {
+        SystemRunner {
+            system: state,
+            world,
+        }
     }
 }
 
