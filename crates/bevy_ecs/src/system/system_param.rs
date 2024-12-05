@@ -1901,8 +1901,9 @@ pub struct SystemRunner<'w, 's, T: System> {
 
 impl<'w, 's, T: System> SystemRunner<'w, 's, T> {
     pub fn run(&mut self, input: SystemIn<'_, T>) -> T::Out {
-        // SAFETY: There is no way of creating an instance of `SystemRunner`
-        unsafe { self.system.run_unsafe(input, self.world) }
+        // TODO: It is unsafe because if `update_archetype_component_access` called here, `SystemRunner` would not
+        // register access to the outer SystemMeta. this function also not possible to call in `new_archetype`
+        // unsafe { self.system.run_unsafe(input, self.world) }
     }
 }
 
@@ -1925,6 +1926,14 @@ unsafe impl<T: System> SystemParam for SystemRunner<'_, '_, T> {
             system: state,
             world,
         }
+    }
+
+    fn new_archetype(
+        state: &mut Self::State,
+        archetype: &Archetype,
+        system_meta: &mut SystemMeta,
+    ) {
+
     }
 }
 

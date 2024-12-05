@@ -4,7 +4,7 @@ use crate::{
     prelude::QueryBuilder,
     query::{QueryData, QueryFilter, QueryState},
     system::{
-        DynSystemParam, DynSystemParamState, Local, ParamSet, Query, SystemMeta, SystemParam,
+        DynSystemParam, DynSystemParamState, Local, ParamSet, Query, System, SystemMeta, SystemRunner, SystemParam,
     },
     world::{
         FilteredResources, FilteredResourcesBuilder, FilteredResourcesMut,
@@ -674,6 +674,34 @@ unsafe impl<'w, 's, T: FnOnce(&mut FilteredResourcesMutBuilder)>
     }
 }
 
+pub struct SystemRunnerBuilder<T: System>(pub T);
+
+impl<T: System> SystemRunnerBuilder<T> {
+    pub fn new(system: T) -> Self {
+        SystemRunnerBuilder(system)
+    }
+}
+
+unsafe impl<'w, 's, T: System> SystemParamBuilder<SystemRunner<'w, 's, T>> for SystemRunnerBuilder<T> {
+    fn build(self, world: &mut World, meta: &mut SystemMeta) -> <SystemRunner<'w, 's, T> as SystemParam>::State {
+        let system = self.0;
+        let access = system.component_access();
+
+        let combined_access = meta.component_access_set.combined_access();
+        let conflicts = combined_access.get_conflicts(&access);
+        if !conflicts.is_empty() {
+            let accesses = conflicts.format_conflict_list(world);
+            let system_name = &meta.name;
+            let inner_system_name = system.name();
+            panic!("Error in system {system_name}. Inner system {inner_system_name} of SystemRunner accesses {accesses} in a way that conflicts with a previous system parameter. Consider using ParamSet or alternative ways of executing systems, for example Commands::run_system_cached.");
+        }
+
+        meta.component_access_set.extend_unfiltered(access);
+        meta.archetype_component_access.extend(system.archetype_component_access());
+
+        system
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate as bevy_ecs;
