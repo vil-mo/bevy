@@ -848,6 +848,16 @@ impl<T: SparseSetIndex> Default for FilteredAccess<T> {
     }
 }
 
+impl<T: SparseSetIndex> From<Access<T>> for FilteredAccess<T> {
+    fn from(access: Access<T>) -> Self {
+        FilteredAccess {
+            access,
+            required: FixedBitSet::default(),
+            filter_sets: Vec::new(),
+        }
+    }
+}
+
 impl<T: SparseSetIndex> From<FilteredAccess<T>> for FilteredAccessSet<T> {
     fn from(filtered_access: FilteredAccess<T>) -> Self {
         let mut base = FilteredAccessSet::<T>::default();
