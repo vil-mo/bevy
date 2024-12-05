@@ -848,16 +848,6 @@ impl<T: SparseSetIndex> Default for FilteredAccess<T> {
     }
 }
 
-impl<T: SparseSetIndex> From<Access<T>> for FilteredAccess<T> {
-    fn from(access: Access<T>) -> Self {
-        FilteredAccess {
-            access,
-            required: FixedBitSet::default(),
-            filter_sets: Vec::new(),
-        }
-    }
-}
-
 impl<T: SparseSetIndex> From<FilteredAccess<T>> for FilteredAccessSet<T> {
     fn from(filtered_access: FilteredAccess<T>) -> Self {
         let mut base = FilteredAccessSet::<T>::default();
@@ -1303,6 +1293,11 @@ impl<T: SparseSetIndex> FilteredAccessSet<T> {
             .extend(&filtered_access_set.combined_access);
         self.filtered_accesses
             .extend(filtered_access_set.filtered_accesses);
+    }
+
+    /// Adds all of the accesses from the passed access to `self`.
+    pub fn extend_unfiltered(&mut self, access: &Access<T>) {
+        self.combined_access.extend(access);
     }
 
     /// Marks the set as reading all possible indices of type T.
